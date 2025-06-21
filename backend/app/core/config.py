@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Database settings
-    database_url: str = "postgresql://postgres:password@db:5432/fastapi_db"
+    database_url: str
     database_password: Optional[str] = None
 
     # JWT environment variable mappings

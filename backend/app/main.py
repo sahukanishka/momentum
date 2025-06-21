@@ -1,7 +1,28 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import api_router
+from app.api.v1.routers import router as v1_router
 from app.core.config import settings
+from app.core.exception import (
+    http_exception_handler,
+    validation_exception_handler,
+    generic_exception_handler,
+    not_found_exception_handler,
+)
+from app.middleware.response_middleware import response_middleware
+from app.api.v1.routers import router as api_router
+from app.db.database import init_db, close_db
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Initializing database...")
+    await init_db()
+    yield
+    print("Closing database...")
+    await close_db()
+
 
 app = FastAPI(
     title=settings.app_name,
@@ -10,6 +31,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     debug=settings.debug,
+    lifespan=lifespan,
 )
 
 # CORS middleware configuration
@@ -20,6 +42,7 @@ app.add_middleware(
     allow_methods=settings.cors_allow_methods,
     allow_headers=settings.cors_allow_headers,
 )
+
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
@@ -33,6 +56,17 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+app.include_router(v1_router, prefix="/api/v1")
+
+
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
+app.add_exception_handler(404, not_found_exception_handler)
+
+app.middleware("http")(response_middleware)
 
 
 if __name__ == "__main__":
