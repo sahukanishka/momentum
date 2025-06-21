@@ -3,9 +3,10 @@ from sqlalchemy import String, Boolean, DateTime, func, Enum
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.database import Base
 import uuid
+import enum
 
 
-class UserRole(Enum):
+class UserRole(str, enum.Enum):
     """Enum for different user roles in the system."""
 
     ADMIN = "admin"
@@ -31,7 +32,7 @@ class User(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=False)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role_enum"), default=UserRole.USER, nullable=False
+        Enum(UserRole), default=UserRole.USER, nullable=False
     )
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)

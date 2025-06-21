@@ -1,8 +1,10 @@
 from passlib.context import CryptContext
 from datetime import timedelta, datetime, timezone
+from app.core.config import settings
 from jose import jwt
 import bcrypt
 import os
+
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -27,7 +29,7 @@ class Security:
     def create_access_token(
         data: dict,
         expires_delta: timedelta = timedelta(
-            minutes=os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES")
+            minutes=settings.jwt_access_token_expire_minutes
         ),
     ):
         token_data = {
@@ -39,8 +41,8 @@ class Security:
         token_data.update({"exp": expire})
         encoded_jwt = jwt.encode(
             token_data,
-            os.getenv("JWT_SECRET_KEY"),
-            algorithm=os.getenv("JWT_ALGORITHM"),
+            settings.jwt_secret_key,
+            algorithm=settings.jwt_algorithm,
         )
         return encoded_jwt
 
@@ -55,13 +57,13 @@ class Security:
         token_data.update({"exp": expire})
         encoded_jwt = jwt.encode(
             token_data,
-            os.getenv("JWT_SECRET_KEY"),
-            algorithm=os.getenv("JWT_ALGORITHM"),
+            settings.jwt_secret_key,
+            algorithm=settings.jwt_algorithm,
         )
         return encoded_jwt
 
     @staticmethod
     def verify_token(token: str) -> dict:
         return jwt.decode(
-            token, os.getenv("JWT_SECRET_KEY"), algorithms=[os.getenv("JWT_ALGORITHM")]
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
         )
