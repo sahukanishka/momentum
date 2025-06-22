@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import String, Boolean, DateTime, func, Enum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.database import Base
 import uuid
 import enum
@@ -44,3 +44,6 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), nullable=False
     )
+
+    # Relationship to organizations
+    organizations = relationship("Organization", back_populates="creator")

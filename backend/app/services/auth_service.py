@@ -31,7 +31,7 @@ class AuthService:
             )
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(
-            to_encode, settings.secret_key, algorithm=settings.algorithm
+            to_encode, settings.JWT_SECRET_KEY, algorithm=settings.algorithm
         )
         return encoded_jwt
 
@@ -40,7 +40,7 @@ class AuthService:
         """Verify and decode a JWT token"""
         try:
             payload = jwt.decode(
-                token, settings.secret_key, algorithms=[settings.algorithm]
+                token, settings.JWT_SECRET_KEY, algorithms=[settings.algorithm]
             )
             email: str = payload.get("sub")
             if email is None:

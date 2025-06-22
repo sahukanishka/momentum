@@ -14,13 +14,19 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Database settings
-    database_url: str
+    database_url: Optional[str] = None
     database_password: Optional[str] = None
 
+    postgres_user: Optional[str] = "postgres"
+    postgres_password: Optional[str] = "password"
+    postgres_server: Optional[str] = "localhost"
+    postgres_port: Optional[str] = "5432"
+    postgres_db: Optional[str] = "fastapi_db"
+
     # JWT environment variable mappings
-    jwt_secret_key: Optional[str] = None
-    jwt_algorithm: Optional[str] = None
-    jwt_access_token_expire_minutes: Optional[int] = None
+    jwt_JWT_SECRET_KEY: str = "your-secret-key-here-change-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 30
 
     # CORS settings
     cors_origins: list = ["*"]

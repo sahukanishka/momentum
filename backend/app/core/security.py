@@ -41,7 +41,7 @@ class Security:
         token_data.update({"exp": expire})
         encoded_jwt = jwt.encode(
             token_data,
-            settings.jwt_secret_key,
+            settings.jwt_JWT_SECRET_KEY,
             algorithm=settings.jwt_algorithm,
         )
         return encoded_jwt
@@ -57,7 +57,7 @@ class Security:
         token_data.update({"exp": expire})
         encoded_jwt = jwt.encode(
             token_data,
-            settings.jwt_secret_key,
+            settings.jwt_JWT_SECRET_KEY,
             algorithm=settings.jwt_algorithm,
         )
         return encoded_jwt
@@ -65,5 +65,5 @@ class Security:
     @staticmethod
     def verify_token(token: str) -> dict:
         return jwt.decode(
-            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+            token, settings.jwt_JWT_SECRET_KEY, algorithms=[settings.jwt_algorithm]
         )

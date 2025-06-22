@@ -11,15 +11,15 @@ from app.schemas.user import UserResponse
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
 
 async def auth_middleware(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
 
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         user_query = await db.execute(select(User).where(User.id == payload["id"]))
 
         user = user_query.scalar_one_or_none()
