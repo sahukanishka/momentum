@@ -6,7 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
 import os
+from dotenv import load_dotenv
+
 from app.schemas.user import UserResponse
+
+load_dotenv()
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -20,6 +24,7 @@ async def auth_middleware(
     try:
 
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        print("payload", payload["id"])
         user_query = await db.execute(select(User).where(User.id == payload["id"]))
 
         user = user_query.scalar_one_or_none()

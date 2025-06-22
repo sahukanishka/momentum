@@ -7,3 +7,9 @@ from app.schemas.organization import (
     OrganizationResponse,
     OrganizationListResponse,
 )
+from app.schemas.employee import (
+    EmployeeCreate,
+    EmployeeUpdate,
+    EmployeeResponse,
+    EmployeeListResponse,
+)

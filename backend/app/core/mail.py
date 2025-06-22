@@ -20,7 +20,7 @@ class MailService:
         self.smtp_password = os.getenv("SMTP_SERVER_PASSWORD")
         self.sender_email = os.getenv("SMTP_SENDER_EMAIL")
 
-        template_dir = Path(__file__).parent.parent / "templates" / "email"
+        template_dir = Path(__file__).parent.parent / "mail_templates"
         self.env = Environment(loader=FileSystemLoader(template_dir))
 
     async def send_email(

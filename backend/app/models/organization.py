@@ -33,3 +33,4 @@ class Organization(Base):
 
     # Relationship
     creator = relationship("User", back_populates="organizations")
+    employees = relationship("Employee", back_populates="organization")
