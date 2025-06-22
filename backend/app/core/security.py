@@ -29,7 +29,7 @@ class Security:
     def create_access_token(
         data: dict,
         expires_delta: timedelta = timedelta(
-            minutes=settings.jwt_access_token_expire_minutes
+            minutes=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES"))
         ),
     ):
         token_data = {
@@ -41,8 +41,8 @@ class Security:
         token_data.update({"exp": expire})
         encoded_jwt = jwt.encode(
             token_data,
-            settings.jwt_JWT_SECRET_KEY,
-            algorithm=settings.jwt_algorithm,
+            os.getenv("JWT_SECRET_KEY"),
+            algorithm=os.getenv("JWT_ALGORITHM"),
         )
         return encoded_jwt
 
@@ -57,13 +57,13 @@ class Security:
         token_data.update({"exp": expire})
         encoded_jwt = jwt.encode(
             token_data,
-            settings.jwt_JWT_SECRET_KEY,
-            algorithm=settings.jwt_algorithm,
+            os.getenv("JWT_SECRET_KEY"),
+            algorithm=os.getenv("JWT_ALGORITHM"),
         )
         return encoded_jwt
 
     @staticmethod
     def verify_token(token: str) -> dict:
         return jwt.decode(
-            token, settings.jwt_JWT_SECRET_KEY, algorithms=[settings.jwt_algorithm]
+            token, os.getenv("JWT_SECRET_KEY"), algorithms=[os.getenv("JWT_ALGORITHM")]
         )

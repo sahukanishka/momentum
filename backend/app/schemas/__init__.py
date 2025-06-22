@@ -13,3 +13,12 @@ from app.schemas.employee import (
     EmployeeResponse,
     EmployeeListResponse,
 )
+
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectUpdate,
+    ProjectResponse,
+    ProjectListResponse,
+    AssignEmployeeRequest,
+    RemoveEmployeeRequest,
+)

@@ -9,6 +9,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     # Application settings
+    env: str = "development"
     app_name: str = "Momentum Fastapi"
     app_version: str = "1.0.0"
     debug: bool = False
@@ -24,7 +25,7 @@ class Settings(BaseSettings):
     postgres_db: Optional[str] = "fastapi_db"
 
     # JWT environment variable mappings
-    jwt_JWT_SECRET_KEY: str = "your-secret-key-here-change-in-production"
+    jwt_secret_key: str = "your-secret-key-here-change-in-production"
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 30
 

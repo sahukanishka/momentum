@@ -31,3 +31,10 @@ class Employee(Base):
     )
 
     organization = relationship("Organization", back_populates="employees")
+
+    projects = relationship(
+        "Project",
+        secondary="project_employees",
+        back_populates="employees",
+        lazy="selectin",
+    )

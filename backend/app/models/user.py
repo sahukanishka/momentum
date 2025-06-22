@@ -32,10 +32,7 @@ class User(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=False)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole),
-        default=UserRole.USER,
-        nullable=False,
-        server_default=UserRole.USER.value,
+        Enum(UserRole), default=UserRole.USER, nullable=False
     )
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
