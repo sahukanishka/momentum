@@ -22,3 +22,13 @@ from app.schemas.project import (
     AssignEmployeeRequest,
     RemoveEmployeeRequest,
 )
+
+from app.schemas.task import (
+    TaskCreate,
+    TaskUpdate,
+    TaskResponse,
+    TaskListResponse,
+    AssignEmployeeToTaskRequest,
+    RemoveEmployeeFromTaskRequest,
+    CreateDefaultTaskRequest,
+)

@@ -38,3 +38,7 @@ class Employee(Base):
         back_populates="employees",
         lazy="selectin",
     )
+
+    tasks = relationship(
+        "Task", secondary="task_employees", back_populates="employees", lazy="selectin"
+    )

@@ -1,6 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, organization, employee
-from app.api.v1.endpoints import auth, organization, employee, project
+from app.api.v1.endpoints import auth, organization, employee, project, task
 
 # from app.api.v1.endpoints import users
 
@@ -15,4 +14,5 @@ router.include_router(employee.router, prefix="/employees", tags=["employees"])
 
 router.include_router(project.router, prefix="/projects", tags=["projects"])
 
+router.include_router(task.router, prefix="/tasks", tags=["tasks"])
 # router.include_router(users.router, prefix="/users", tags=["users"])
