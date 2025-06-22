@@ -32,3 +32,25 @@ from app.schemas.task import (
     RemoveEmployeeFromTaskRequest,
     CreateDefaultTaskRequest,
 )
+
+from app.schemas.time_tracking import (
+    ClockInRequest,
+    ClockOutRequest,
+    BreakRequest,
+    TimeTrackingResponse,
+    TimeTrackingListResponse,
+    EmployeeTimeListResponse,
+    TimeTrackingFilters,
+    CurrentSessionResponse,
+    TimeReportRequest,
+    TimeTrackingUpdate,
+)
+
+from app.schemas.screenshot import (
+    ScreenshotCreate,
+    ScreenshotUpdate,
+    ScreenshotResponse,
+    ScreenshotListResponse,
+    ScreenshotFilters,
+    ScreenshotUploadRequest,
+)

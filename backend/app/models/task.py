@@ -71,3 +71,5 @@ class Task(Base):
     employees = relationship(
         "Employee", secondary=task_employees, back_populates="tasks", lazy="selectin"
     )
+    time_logs = relationship("TimeTracking", back_populates="task")
+    screenshots = relationship("Screenshot", back_populates="task")

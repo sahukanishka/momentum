@@ -73,3 +73,6 @@ class Project(Base):
         lazy="selectin",
     )
     tasks = relationship("Task", back_populates="project")
+
+    time_logs = relationship("TimeTracking", back_populates="project")
+    screenshots = relationship("Screenshot", back_populates="project")
