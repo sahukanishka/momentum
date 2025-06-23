@@ -22,9 +22,9 @@ mail_service = MailService()
 router = APIRouter()
 
 
-@router.get("/")
-async def check_auth():
-    raise HTTPException(status_code=401, detail="Unauthorized")
+# @router.get("/")
+# async def check_auth():
+#     raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 class RegisterUserRequest(BaseModel):
@@ -33,34 +33,34 @@ class RegisterUserRequest(BaseModel):
     name: str
 
 
-@router.post("/register")
-async def register(request: RegisterUserRequest, db: AsyncSession = Depends(get_db)):
-    try:
-        existing_user = await UserService.get_by_email(db, request.email.lower())
-        if existing_user:
-            raise HTTPException(status_code=400, detail="User already exists")
-        if not validate_password(request.password):
-            raise HTTPException(status_code=400, detail="Invalid password")
-        hashed_password = Security.get_password_hash(request.password)
-        user_dict = request.model_dump()
-        user_dict.pop("password", None)  # Remove password key from user_dict
-        user_dict["hashed_password"] = hashed_password
-        user_dict["otp"] = generate_otp(6)
-        user_dict["otp_expiry"] = datetime.now() + timedelta(minutes=10)
-        user_dict["role"] = UserRole.USER
-        user_dict["email"] = request.email.lower()
-        await mail_service.send_otp_email(
-            to_email=request.email, otp=user_dict["otp"], name=user_dict["name"]
-        )
+# @router.post("/register")
+# async def register(request: RegisterUserRequest, db: AsyncSession = Depends(get_db)):
+#     try:
+#         existing_user = await UserService.get_by_email(db, request.email.lower())
+#         if existing_user:
+#             raise HTTPException(status_code=400, detail="User already exists")
+#         if not validate_password(request.password):
+#             raise HTTPException(status_code=400, detail="Invalid password")
+#         hashed_password = Security.get_password_hash(request.password)
+#         user_dict = request.model_dump()
+#         user_dict.pop("password", None)  # Remove password key from user_dict
+#         user_dict["hashed_password"] = hashed_password
+#         user_dict["otp"] = generate_otp(6)
+#         user_dict["otp_expiry"] = datetime.now() + timedelta(minutes=10)
+#         user_dict["role"] = UserRole.USER
+#         user_dict["email"] = request.email.lower()
+#         await mail_service.send_otp_email(
+#             to_email=request.email, otp=user_dict["otp"], name=user_dict["name"]
+#         )
 
-        await UserService.create(db, user_dict)
-        return {
-            "message": "Otp sent successfully on email",
-        }
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#         await UserService.create(db, user_dict)
+#         return {
+#             "message": "Otp sent successfully on email",
+#         }
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 class SignupRequest(BaseModel):
@@ -248,18 +248,18 @@ class LoginGoogleRequest(BaseModel):
     token: str
 
 
-@router.post("/login-google")
-async def login_google(request: LoginGoogleRequest):
-    pass
+# @router.post("/login-google")
+# async def login_google(request: LoginGoogleRequest):
+#     pass
 
 
 class LogoutRequest(BaseModel):
     refresh_token: str
 
 
-@router.post("/logout")
-async def logout(request: LogoutRequest):
-    pass
+# @router.post("/logout")
+# async def logout(request: LogoutRequest):
+#     pass
 
 
 @router.get("/me")
