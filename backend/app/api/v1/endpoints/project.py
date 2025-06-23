@@ -84,6 +84,24 @@ async def get_organization_projects(
             response_data = ProjectResponse.model_validate(project)
             if project.organization:
                 response_data.organization_name = project.organization.name
+
+            # Format employee data with assigned_at field
+            employee_responses = []
+            for employee in project.employees:
+                # Get the assigned_at from the association table
+                assigned_at = await ProjectService.get_employee_assigned_at(
+                    db=db, project_id=project.id, employee_id=employee.id
+                )
+                employee_response = {
+                    "id": employee.id,
+                    "name": employee.name,
+                    "email": employee.email,
+                    "assigned_at": assigned_at or project.created_at,
+                    "is_active": employee.is_active,
+                }
+                employee_responses.append(employee_response)
+
+            response_data.employees = employee_responses
             project_responses.append(response_data)
 
         return ProjectListResponse(
@@ -125,6 +143,24 @@ async def get_project(
         if project.organization:
             response_data.organization_name = project.organization.name
 
+        # Format employee data with assigned_at field
+        employee_responses = []
+        for employee in project.employees:
+            # Get the assigned_at from the association table
+            assigned_at = await ProjectService.get_employee_assigned_at(
+                db=db, project_id=project.id, employee_id=employee.id
+            )
+            employee_response = {
+                "id": employee.id,
+                "name": employee.name,
+                "email": employee.email,
+                "assigned_at": assigned_at or project.created_at,
+                "is_active": employee.is_active,
+            }
+            employee_responses.append(employee_response)
+
+        response_data.employees = employee_responses
+
         return response_data
     except HTTPException as e:
         raise e
@@ -157,6 +193,24 @@ async def update_project(
         response_data = ProjectResponse.model_validate(project)
         if project.organization:
             response_data.organization_name = project.organization.name
+
+        # Format employee data with assigned_at field
+        employee_responses = []
+        for employee in project.employees:
+            # Get the assigned_at from the association table
+            assigned_at = await ProjectService.get_employee_assigned_at(
+                db=db, project_id=project.id, employee_id=employee.id
+            )
+            employee_response = {
+                "id": employee.id,
+                "name": employee.name,
+                "email": employee.email,
+                "assigned_at": assigned_at or project.created_at,
+                "is_active": employee.is_active,
+            }
+            employee_responses.append(employee_response)
+
+        response_data.employees = employee_responses
 
         return response_data
     except HTTPException as e:

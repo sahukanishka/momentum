@@ -9,6 +9,7 @@ from app.models.organization import Organization
 from app.models.user import User, UserRole
 from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
 from fastapi import HTTPException
+from datetime import datetime
 
 
 class ProjectService:
@@ -323,6 +324,22 @@ class ProjectService:
             )
         )
         return result.scalars().all()
+
+    @staticmethod
+    async def get_employee_assigned_at(
+        db: AsyncSession, project_id: str, employee_id: str
+    ) -> Optional[datetime]:
+        """Get the assigned_at timestamp for an employee in a project"""
+        result = await db.execute(
+            select(project_employees.c.assigned_at).where(
+                and_(
+                    project_employees.c.project_id == project_id,
+                    project_employees.c.employee_id == employee_id,
+                    project_employees.c.is_active == True,
+                )
+            )
+        )
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def can_user_manage_organization(

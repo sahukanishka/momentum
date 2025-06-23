@@ -40,7 +40,7 @@ class ProjectEmployeeResponse(BaseModel):
     id: str
     name: str
     email: str
-    assigned_at: datetime
+    assigned_at: Optional[datetime] = None
     is_active: bool
 
     class Config:

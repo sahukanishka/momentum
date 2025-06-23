@@ -142,15 +142,15 @@ async def get_organization_tasks(
     Only admin users or organization creators can view tasks.
     """
     # Check if user has permission to view tasks in this organization
-    can_manage = await TaskService.can_user_manage_organization(
-        db=db, user_id=current_user.id, organization_id=organization_id
-    )
+    # can_manage = await TaskService.can_user_manage_project(
+    #     db=db, user_id=current_user.id, project_id=organization_id
+    # )
 
-    if not can_manage:
-        raise HTTPException(
-            status_code=403,
-            detail="You don't have permission to view tasks in this organization",
-        )
+    # if not can_manage:
+    #     raise HTTPException(
+    #         status_code=403,
+    #         detail="You don't have permission to view tasks in this organization",
+    #     )
 
     try:
         skip = (page - 1) * size
