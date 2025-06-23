@@ -6,6 +6,10 @@ import json
 async def response_middleware(request: Request, call_next):
     response = await call_next(request)
 
+    # Skip middleware for OpenAPI endpoints
+    if request.url.path in ["/openapi.json", "/docs", "/redoc"]:
+        return response
+
     # Preserve CORS headers
     cors_headers = {
         "Access-Control-Allow-Origin": "*",

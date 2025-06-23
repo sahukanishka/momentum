@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer
 from app.api.v1.routers import router as v1_router
 from app.core.config import settings
 from app.core.exception import (
@@ -14,6 +15,11 @@ from app.api.v1.routers import router as api_router
 from app.db.database import init_db, close_db
 from contextlib import asynccontextmanager
 
+# Security scheme for JWT authentication
+security = HTTPBearer(
+    scheme_name="JWT", description="Enter your JWT token in the format: Bearer <token>"
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,12 +32,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    description="A modern FastAPI boilerplate with best practices",
+    description="Momentum API",
     version=settings.app_version,
     docs_url="/docs",
     redoc_url="/redoc",
     debug=settings.debug,
     lifespan=lifespan,
+    servers=[
+        {"url": "http://localhost:8000", "description": "Development server"},
+        {"url": "https://api.momentum.com", "description": "Production server"},
+    ],
 )
 
 # Define CORS origins explicitly
@@ -57,23 +67,45 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api/v1")
 
 
-@app.get("/")
+@app.get(
+    "/",
+    tags=["Utility"],
+    summary="Root endpoint",
+    response_description="Welcome message",
+)
 async def root():
     return {"message": f"Welcome to {settings.app_name}!"}
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    tags=["Utility"],
+    summary="Health check",
+    response_description="API health status",
+)
 async def health_check():
     return {"status": "healthy"}
 
 
-@app.get("/test-cors")
+@app.get(
+    "/test-cors",
+    tags=["Utility"],
+    summary="Test CORS",
+    response_description="CORS test response",
+)
 async def test_cors():
+
     return {"message": "CORS is working!", "timestamp": "2024-01-01T00:00:00Z"}
 
 
-@app.get("/debug")
+@app.get(
+    "/debug",
+    tags=["Utility"],
+    summary="Debug information",
+    response_description="Debug configuration",
+)
 async def debug_info():
+
     return {
         "message": "Debug endpoint",
         "cors_origins": origins,
@@ -82,8 +114,9 @@ async def debug_info():
     }
 
 
-@app.options("/{full_path:path}")
+@app.options("/{full_path:path}", tags=["Utility"], summary="Handle preflight requests")
 async def options_handler(full_path: str):
+
     return {"message": "OK"}
 
 
