@@ -34,15 +34,24 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Define CORS origins explicitly
+origins = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",  # Vite default port
+    "http://127.0.0.1:5173",
+]
+
 # CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=settings.cors_allow_credentials,
-    allow_methods=settings.cors_allow_methods,
-    allow_headers=settings.cors_allow_headers,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["*"],
 )
-
 
 # Include API router
 app.include_router(api_router, prefix="/api/v1")
@@ -56,6 +65,26 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/test-cors")
+async def test_cors():
+    return {"message": "CORS is working!", "timestamp": "2024-01-01T00:00:00Z"}
+
+
+@app.get("/debug")
+async def debug_info():
+    return {
+        "message": "Debug endpoint",
+        "cors_origins": origins,
+        "app_name": settings.app_name,
+        "debug": settings.debug,
+    }
+
+
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    return {"message": "OK"}
 
 
 app.include_router(v1_router, prefix="/api/v1")

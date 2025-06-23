@@ -30,7 +30,13 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 30
 
     # CORS settings
-    cors_origins: list = ["*"]
+    cors_origins: list = [
+        "*",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
     cors_allow_credentials: bool = True
     cors_allow_methods: list = ["*"]
     cors_allow_headers: list = ["*"]
