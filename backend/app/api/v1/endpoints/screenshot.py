@@ -14,6 +14,8 @@ from app.schemas.screenshot import (
 )
 from app.services.screenshot_service import ScreenshotService
 from datetime import datetime
+import boto3
+import os
 
 router = APIRouter()
 
@@ -423,3 +425,32 @@ async def delete_screenshot(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/s3/presigned-url")
+async def get_presigned_url(file_name: str, content_type: str):
+    s3_client = boto3.client(
+        "s3",
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        region_name=os.getenv("AWS_REGION"),
+    )
+
+    presigned_url = s3_client.generate_presigned_url(
+        "put_object",
+        Params={
+            "Bucket": os.getenv("AWS_S3_BUCKET"),
+            "Key": "screenshots/" + file_name,
+            "ContentType": content_type,
+        },
+        ExpiresIn=3600,
+    )
+
+    return {
+        "success": True,
+        "data": {
+            "uploadUrl": presigned_url,
+            "url": f"{os.getenv('AWS_S3_ENDPOINT')}/{file_name}",
+            "path": file_name,
+        },
+    }
