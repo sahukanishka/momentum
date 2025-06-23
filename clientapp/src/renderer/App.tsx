@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from "react";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import WelcomeScreen from "./components/WelcomeScreen";
+import LoginScreen from "./components/LoginScreen";
 import TimeDisplay from "./components/TimeDisplay";
 import TimerControls from "./components/TimerControls";
 import ProjectSelector from "./components/ProjectSelector";
 import TimeLog from "./components/TimeLog";
 import ActivityControls from "./components/ActivityControls";
-import WelcomeScreen from "./components/WelcomeScreen";
-import LoginScreen from "./components/LoginScreen";
+import UploadStatus from "./components/UploadStatus";
+import PermissionDebugger from "./components/PermissionDebugger";
+import { activityTracker } from "./services/ActivityTracker";
 
 interface TimeEntry {
   id: string;
@@ -16,11 +20,11 @@ interface TimeEntry {
   description: string;
 }
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { user, isAuthenticated, isLoading, logout, employeeId } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<
     "welcome" | "login" | "home"
   >("welcome");
-  const [user, setUser] = useState<any>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isTracking, setIsTracking] = useState(false);
   const [selectedProject, setSelectedProject] = useState("General");
@@ -29,15 +33,15 @@ const App: React.FC = () => {
   const [startTime, setStartTime] = useState<Date | null>(null);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem("momentum_user");
-    const accessToken = localStorage.getItem("momentum_access_token");
+    // Set screen based on authentication state
+    if (isLoading) return; // Wait for auth state to load
 
-    if (savedUser && accessToken) {
-      setUser(JSON.parse(savedUser));
+    if (isAuthenticated) {
       setCurrentScreen("home");
+    } else {
+      setCurrentScreen("welcome");
     }
-  }, []);
+  }, [isAuthenticated, isLoading]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -62,12 +66,19 @@ const App: React.FC = () => {
       .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleStartTimer = () => {
+  const handleStartTimer = async () => {
     setIsTracking(true);
     setStartTime(new Date());
+
+    console.log("employeeId", employeeId);
+
+    await activityTracker.clockIn(
+      employeeId || "",
+      description || "Starting shift"
+    );
   };
 
-  const handleStopTimer = () => {
+  const handleStopTimer = async () => {
     if (startTime) {
       const endTime = new Date();
       const duration = Math.floor(
@@ -87,33 +98,36 @@ const App: React.FC = () => {
       setDescription("");
     }
 
+    await activityTracker.clockOut(employeeId, description || "Ending shift");
+
     setIsTracking(false);
     setCurrentTime(0);
     setStartTime(null);
   };
 
-  const handleLoginSuccess = (
-    userData: any,
-    tokens: { access_token: string; refresh_token: string }
-  ) => {
-    setUser(userData);
-    setCurrentScreen("home");
-  };
-
   const handleLogout = () => {
-    localStorage.removeItem("momentum_user");
-    localStorage.removeItem("momentum_access_token");
-    localStorage.removeItem("momentum_refresh_token");
-    setUser(null);
+    logout();
     setCurrentScreen("welcome");
   };
+
+  // Show loading state while auth is being determined
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4 animate-pulse">⏱️</div>
+          <div className="text-lg text-gray-600">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (currentScreen === "welcome") {
     return <WelcomeScreen onContinue={() => setCurrentScreen("login")} />;
   }
 
   if (currentScreen === "login") {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+    return <LoginScreen onLoginSuccess={() => setCurrentScreen("home")} />;
   }
 
   return (
@@ -178,6 +192,9 @@ const App: React.FC = () => {
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
               <TimeLog timeEntries={timeEntries} formatTime={formatTime} />
             </div>
+
+            {/* Upload Status */}
+            <UploadStatus />
           </div>
 
           {/* Activity Controls Sidebar */}
@@ -186,15 +203,26 @@ const App: React.FC = () => {
               <ActivityControls />
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
-          >
-            Logout
-          </button>
         </div>
+        <button
+          onClick={handleLogout}
+          className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+        >
+          Logout
+        </button>
       </div>
+
+      {/* Permission Debugger - only show in development */}
+      {process.env.NODE_ENV === "development" && <PermissionDebugger />}
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

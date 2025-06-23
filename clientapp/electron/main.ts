@@ -8,10 +8,36 @@ import {
   screen,
   globalShortcut,
   shell,
+  systemPreferences,
 } from "electron";
 import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
+
+// Debug logging setup
+const isDebugMode =
+  process.argv.includes("--debug") || process.env.NODE_ENV === "development";
+const logLevel = process.argv.includes("--verbose") ? "verbose" : "normal";
+
+function log(
+  message: string,
+  level: "info" | "warn" | "error" | "debug" = "info"
+) {
+  const timestamp = new Date().toISOString();
+  const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
+
+  if (level === "debug" && !isDebugMode) return;
+
+  console.log(`${prefix} ${message}`);
+}
+
+// Log startup information
+log("Momentum Time Tracker starting...", "info");
+log(`Debug mode: ${isDebugMode}`, "debug");
+log(`Log level: ${logLevel}`, "debug");
+log(`Node version: ${process.version}`, "debug");
+log(`Platform: ${process.platform}`, "debug");
+log(`Architecture: ${process.arch}`, "debug");
 
 // Extend the App interface to include isQuiting property
 declare global {
@@ -31,12 +57,11 @@ let lastMouseActivity = Date.now();
 let keyboardActivityCount = 0;
 let mouseActivityCount = 0;
 
-// Activity tracking intervals
-let activityTrackingInterval: NodeJS.Timeout | null = null;
+// Activity tracking intervals - only screenshot interval
 let screenshotInterval: NodeJS.Timeout | null = null;
 
 function createWindow() {
-  console.log("Creating window...");
+  log("Creating main window...", "info");
 
   mainWindow = new BrowserWindow({
     width: 400,
@@ -56,21 +81,24 @@ function createWindow() {
     title: "Momentum Time Tracker",
   });
 
+  log(`Window created with ID: ${mainWindow.id}`, "debug");
+
   // Load the app
   if (process.env.NODE_ENV === "development") {
-    console.log("Loading development URL...");
+    log("Loading development URL: http://localhost:3000", "info");
     mainWindow.loadURL("http://localhost:3000");
     mainWindow.webContents.openDevTools();
+    log("DevTools opened", "debug");
   } else {
     // In production, load from the dist directory
     const indexPath = path.join(__dirname, "index.html");
-    console.log("Loading from:", indexPath);
+    log(`Loading production build from: ${indexPath}`, "info");
     mainWindow.loadFile(indexPath);
   }
 
   // Show window when ready
   mainWindow.once("ready-to-show", () => {
-    console.log("Window ready to show");
+    log("Window ready to show", "info");
     mainWindow?.show();
   });
 
@@ -78,17 +106,18 @@ function createWindow() {
   mainWindow.webContents.on(
     "did-fail-load",
     (event, errorCode, errorDescription) => {
-      console.error("Failed to load:", errorCode, errorDescription);
+      log(`Failed to load: ${errorCode} - ${errorDescription}`, "error");
     }
   );
 
   // Handle successful load
   mainWindow.webContents.on("did-finish-load", () => {
-    console.log("Window loaded successfully");
+    log("Window loaded successfully", "info");
   });
 
   // Handle window close
   mainWindow.on("closed", () => {
+    log("Main window closed", "debug");
     mainWindow = null;
   });
 
@@ -117,7 +146,7 @@ function setupGlobalShortcuts() {
 }
 
 function createTray() {
-  console.log("Creating tray...");
+  log("Creating tray...", "info");
 
   // Create a simple icon (you can replace this with your own icon)
   const icon = nativeImage.createFromDataURL(
@@ -170,17 +199,15 @@ function startActivityTracking() {
   if (isActivityTracking) return;
 
   isActivityTracking = true;
-  console.log("Starting activity tracking...");
+  log("Starting activity tracking (screenshots only)...", "info");
 
-  // Start activity monitoring
-  activityTrackingInterval = setInterval(() => {
-    trackActivity();
-  }, 5000); // Every 5 seconds
-
-  // Start screenshot capture
+  // Start screenshot capture with activity details every 30 seconds
   screenshotInterval = setInterval(() => {
-    captureScreenshot();
+    captureScreenshotWithActivity();
   }, 30000); // Every 30 seconds
+
+  // Initial capture
+  captureScreenshotWithActivity();
 
   // Update tray menu
   updateTrayMenu();
@@ -190,12 +217,7 @@ function stopActivityTracking() {
   if (!isActivityTracking) return;
 
   isActivityTracking = false;
-  console.log("Stopping activity tracking...");
-
-  if (activityTrackingInterval) {
-    clearInterval(activityTrackingInterval);
-    activityTrackingInterval = null;
-  }
+  log("Stopping activity tracking...", "info");
 
   if (screenshotInterval) {
     clearInterval(screenshotInterval);
@@ -242,8 +264,11 @@ function updateTrayMenu() {
   tray.setContextMenu(contextMenu);
 }
 
-async function trackActivity() {
+async function captureScreenshotWithActivity() {
   try {
+    log("Capturing screenshot with activity data...", "debug");
+
+    // Gather activity data
     const activityData = {
       timestamp: Date.now(),
       mousePosition: screen.getCursorScreenPoint(),
@@ -255,21 +280,24 @@ async function trackActivity() {
       mouseActivityCount,
     };
 
-    console.log("Activity tracked:", activityData);
+    log("Activity data gathered:", "debug");
 
-    // Send to renderer process
-    mainWindow?.webContents.send("activity-update", activityData);
+    // Send to renderer process for screenshot capture with activity data
+    mainWindow?.webContents.send(
+      "capture-screenshot-with-activity",
+      activityData
+    );
   } catch (error) {
-    console.error("Activity tracking failed:", error);
+    log(`Screenshot capture with activity failed: ${error}`, "error");
   }
 }
 
 async function captureScreenshot() {
   try {
     // This will be handled by the renderer process via preload script
-    console.log("Screenshot capture requested");
+    log("Screenshot capture requested", "debug");
   } catch (error) {
-    console.error("Screenshot capture failed:", error);
+    log(`Screenshot capture failed: ${error}`, "error");
   }
 }
 
@@ -299,6 +327,39 @@ async function getIdleTime(): Promise<number> {
   } catch (error) {
     return 0;
   }
+}
+
+// Check screen recording permission on macOS
+function checkScreenRecordingPermission(): boolean {
+  if (process.platform === "darwin") {
+    try {
+      // Check if screen recording permission is granted
+      const hasPermission = systemPreferences.getMediaAccessStatus("screen");
+      console.log("Screen recording permission status:", hasPermission);
+      return hasPermission === "granted";
+    } catch (error) {
+      console.error("Error checking screen recording permission:", error);
+      return false;
+    }
+  }
+  return true; // On non-macOS platforms, assume permission is granted
+}
+
+// Check accessibility permission on macOS
+function checkAccessibilityPermission(): boolean {
+  if (process.platform === "darwin") {
+    try {
+      // Check if accessibility permission is granted
+      const hasPermission =
+        systemPreferences.isTrustedAccessibilityClient(false);
+      console.log("Accessibility permission status:", hasPermission);
+      return hasPermission;
+    } catch (error) {
+      console.error("Error checking accessibility permission:", error);
+      return false;
+    }
+  }
+  return true; // On non-macOS platforms, assume permission is granted
 }
 
 async function openSystemPreferences(permissionType: string) {
@@ -348,14 +409,37 @@ ipcMain.handle("get-keyboard-activity", () => {
   return Date.now() - lastKeyboardActivity < 5000;
 });
 
+ipcMain.handle("get-activity-data", async () => {
+  try {
+    const activityData = {
+      timestamp: Date.now(),
+      mousePosition: screen.getCursorScreenPoint(),
+      keyboardActivity: Date.now() - lastKeyboardActivity < 5000, // Active if keyboard used in last 5 seconds
+      applicationName: await getActiveApplication(),
+      windowTitle: await getActiveWindowTitle(),
+      idleTime: await getIdleTime(),
+      keyboardActivityCount,
+      mouseActivityCount,
+    };
+
+    log("Activity data requested from renderer", "debug");
+    return activityData;
+  } catch (error) {
+    log(`Error getting activity data: ${error}`, "error");
+    return null;
+  }
+});
+
 ipcMain.handle("get-active-application", getActiveApplication);
 ipcMain.handle("get-active-window-title", getActiveWindowTitle);
 ipcMain.handle("get-idle-time", getIdleTime);
 
 ipcMain.handle("check-accessibility-permission", () => {
-  // This would check if accessibility permission is granted
-  // For now, return true (you'd implement proper permission checking)
-  return true;
+  return checkAccessibilityPermission();
+});
+
+ipcMain.handle("check-screen-recording-permission", () => {
+  return checkScreenRecordingPermission();
 });
 
 ipcMain.handle("request-accessibility-permission", () => {

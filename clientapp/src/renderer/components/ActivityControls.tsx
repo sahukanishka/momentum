@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { activityTracker } from "../services/ActivityTracker";
 
 const ActivityControls: React.FC = () => {
+  const {
+    user,
+    organizationId,
+    employeeId,
+    projectId,
+    taskId,
+    setTrackingData,
+  } = useAuth();
   const [permissionsGranted, setPermissionsGranted] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState({
@@ -16,25 +25,32 @@ const ActivityControls: React.FC = () => {
 
   const checkPermissions = async () => {
     try {
+      // Check screen recording permission using the new method
       const screenPermission = await (
         window as any
-      ).electronAPI.getScreenSources();
+      ).electronAPI.checkScreenRecordingPermission();
       const accessibilityPermission = await (
         window as any
       ).electronAPI.checkAccessibilityPermission();
 
-      setPermissionStatus({
-        screen: screenPermission && screenPermission.length > 0,
+      console.log("Permission check results:", {
+        screen: screenPermission,
         accessibility: accessibilityPermission,
       });
 
-      setPermissionsGranted(
-        screenPermission &&
-          screenPermission.length > 0 &&
-          accessibilityPermission
-      );
+      setPermissionStatus({
+        screen: screenPermission,
+        accessibility: accessibilityPermission,
+      });
+
+      setPermissionsGranted(screenPermission && accessibilityPermission);
     } catch (error) {
       console.error("Error checking permissions:", error);
+      setPermissionStatus({
+        screen: false,
+        accessibility: false,
+      });
+      setPermissionsGranted(false);
     }
   };
 
@@ -114,7 +130,22 @@ const ActivityControls: React.FC = () => {
     }
 
     try {
-      await activityTracker.startTracking();
+      // Generate a unique tracking ID
+      const trackingId = `tracking_${user?.id}_${Date.now()}`;
+
+      // Set tracking data in context
+      setTrackingData({ trackingId });
+
+      // Start tracking with user and organization context
+      await activityTracker.startTracking({
+        userId: user?.id,
+        organizationId: organizationId || undefined,
+        employeeId: employeeId || undefined,
+        trackingId,
+        projectId: projectId || undefined,
+        taskId: taskId || undefined,
+      });
+
       setIsTracking(true);
     } catch (error) {
       console.error("Error starting tracking:", error);
@@ -133,7 +164,15 @@ const ActivityControls: React.FC = () => {
   };
 
   const getSessionInfo = () => {
-    return activityTracker.getSessionInfo();
+    const sessionInfo = activityTracker.getSessionInfo();
+    return {
+      ...sessionInfo,
+      userId: user?.id || "Unknown",
+      organizationId: organizationId || "Not set",
+      employeeId: employeeId || "Not set",
+      projectId: projectId || "Not set",
+      taskId: taskId || "Not set",
+    };
   };
 
   return (
@@ -231,16 +270,46 @@ const ActivityControls: React.FC = () => {
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">Session ID</span>
+            <span className="text-sm text-gray-700">User ID</span>
             <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">
-              {getSessionInfo().sessionId.substring(0, 8)}...
+              {user?.id ? `${user.id.substring(0, 8)}...` : "Not set"}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">User ID</span>
+            <span className="text-sm text-gray-700">Organization ID</span>
             <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">
-              {getSessionInfo().userId.substring(0, 8)}...
+              {organizationId
+                ? `${organizationId.substring(0, 8)}...`
+                : "Not set"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700">Employee ID</span>
+            <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">
+              {employeeId ? `${employeeId.substring(0, 8)}...` : "Not set"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700">Project ID</span>
+            <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">
+              {projectId ? `${projectId.substring(0, 8)}...` : "Not set"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700">Task ID</span>
+            <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">
+              {taskId ? `${taskId.substring(0, 8)}...` : "Not set"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700">Session ID</span>
+            <span className="text-xs text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded">
+              {getSessionInfo().sessionId.substring(0, 8)}...
             </span>
           </div>
         </div>
@@ -276,8 +345,8 @@ const ActivityControls: React.FC = () => {
         </h3>
         <p className="text-sm text-yellow-700 leading-relaxed">
           This app tracks your activity for remote work monitoring purposes.
-          Screenshots are captured every 30 seconds and activity data every 5
-          seconds. All data is sent to your employer's monitoring system.
+          Screenshots with activity details are captured every 30 seconds and
+          sent to your employer's monitoring system.
         </p>
       </div>
     </div>

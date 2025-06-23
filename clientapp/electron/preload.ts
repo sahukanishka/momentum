@@ -14,6 +14,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Screenshot and activity tracking
   captureScreenshot: async () => {
     try {
+      // First check if we have screen recording permission
+      const hasScreenPermission = await ipcRenderer.invoke(
+        "check-screen-recording-permission"
+      );
+
+      if (!hasScreenPermission) {
+        console.error("Screen recording permission not granted");
+        throw new Error(
+          "Screen recording permission not granted. Please grant permission in System Preferences > Security & Privacy > Privacy > Screen Recording"
+        );
+      }
+
       const sources = await desktopCapturer.getSources({
         types: ["screen"],
         thumbnailSize: { width: 1920, height: 1080 },
@@ -31,7 +43,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       return null;
     } catch (error) {
       console.error("Screenshot capture failed:", error);
-      return null;
+      throw error; // Re-throw to let the renderer handle it
     }
   },
 
@@ -60,6 +72,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Permission requests
   getScreenSources: async () => {
     try {
+      // First check if we have screen recording permission
+      const hasScreenPermission = await ipcRenderer.invoke(
+        "check-screen-recording-permission"
+      );
+
+      if (!hasScreenPermission) {
+        console.error("Screen recording permission not granted");
+        return [];
+      }
+
       const sources = await desktopCapturer.getSources({
         types: ["screen"],
         thumbnailSize: { width: 100, height: 100 },
@@ -73,6 +95,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   checkAccessibilityPermission: () =>
     ipcRenderer.invoke("check-accessibility-permission"),
+
+  checkScreenRecordingPermission: () =>
+    ipcRenderer.invoke("check-screen-recording-permission"),
+
   requestAccessibilityPermission: () =>
     ipcRenderer.invoke("request-accessibility-permission"),
 
@@ -84,6 +110,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   startActivityTracking: () => ipcRenderer.invoke("start-activity-tracking"),
   stopActivityTracking: () => ipcRenderer.invoke("stop-activity-tracking"),
   getTrackingStatus: () => ipcRenderer.invoke("get-tracking-status"),
+
+  // Listen for screenshot with activity capture requests
+  onCaptureScreenshotWithActivity: (callback: (activityData: any) => void) => {
+    ipcRenderer.on(
+      "capture-screenshot-with-activity",
+      (event, activityData) => {
+        callback(activityData);
+      }
+    );
+  },
 
   // System information
   getSystemInfo: () => ipcRenderer.invoke("get-system-info"),

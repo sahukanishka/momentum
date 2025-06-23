@@ -1,13 +1,12 @@
 import React, { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 
 interface LoginScreenProps {
-  onLoginSuccess: (
-    user: any,
-    tokens: { access_token: string; refresh_token: string }
-  ) => void;
+  onLoginSuccess: () => void;
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,26 +16,51 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
     try {
       const res = await fetch("http://127.0.0.1:8000/api/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
+
       if (data.success && data.data && data.data.access_token) {
-        // Store in localStorage
-        localStorage.setItem("momentum_user", JSON.stringify(data.data.user));
-        localStorage.setItem("momentum_access_token", data.data.access_token);
-        localStorage.setItem("momentum_refresh_token", data.data.refresh_token);
-        onLoginSuccess(data.data.user, {
+        // Extract user data and tokens
+        const userData = {
+          id: data.data.user.id || data.data.user.user_id,
+          name:
+            data.data.user.name ||
+            data.data.user.full_name ||
+            data.data.user.email,
+          email: data.data.user.email,
+          role: data.data.user.role,
+          avatar: data.data.user.avatar,
+        };
+
+        const tokens = {
           access_token: data.data.access_token,
           refresh_token: data.data.refresh_token,
-        });
+        };
+
+        // Extract organization data if available
+        const orgData =
+          data.data.organization_id || data.data.employee_id
+            ? {
+                organizationId: data.data.organization_id,
+                employeeId: data.data.employee_id,
+              }
+            : undefined;
+
+        // Use AuthContext to login
+        login(userData, tokens, orgData);
+        onLoginSuccess();
       } else {
-        setError("Invalid credentials or server error.");
+        setError(data.message || "Invalid credentials or server error.");
       }
     } catch (err) {
+      console.error("Login error:", err);
       setError("Network error. Please try again.");
     } finally {
       setLoading(false);
@@ -65,7 +89,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm"
+              className="w-full text-black px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm"
               placeholder="Enter your email"
               required
               autoFocus
@@ -80,7 +104,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm"
+              className="w-full text-black px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm"
               placeholder="Enter your password"
               required
             />
