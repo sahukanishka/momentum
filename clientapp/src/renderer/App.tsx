@@ -4,12 +4,10 @@ import WelcomeScreen from "./components/WelcomeScreen";
 import LoginScreen from "./components/LoginScreen";
 import TimeDisplay from "./components/TimeDisplay";
 import TimerControls from "./components/TimerControls";
-import ProjectSelector from "./components/ProjectSelector";
 import TimeLog from "./components/TimeLog";
-import ActivityControls from "./components/ActivityControls";
 import UploadStatus from "./components/UploadStatus";
 import PermissionDebugger from "./components/PermissionDebugger";
-import { activityTracker } from "./services/ActivityTracker";
+import ScreenshotTest from "./components/ScreenshotTest";
 
 interface TimeEntry {
   id: string;
@@ -71,11 +69,6 @@ const AppContent: React.FC = () => {
     setStartTime(new Date());
 
     console.log("employeeId", employeeId);
-
-    await activityTracker.clockIn(
-      employeeId || "",
-      description || "Starting shift"
-    );
   };
 
   const handleStopTimer = async () => {
@@ -97,8 +90,6 @@ const AppContent: React.FC = () => {
       setTimeEntries((prev) => [newEntry, ...prev.slice(0, 9)]); // Keep only last 10 entries
       setDescription("");
     }
-
-    await activityTracker.clockOut(employeeId, description || "Ending shift");
 
     setIsTracking(false);
     setCurrentTime(0);
@@ -195,13 +186,9 @@ const AppContent: React.FC = () => {
 
             {/* Upload Status */}
             <UploadStatus />
-          </div>
 
-          {/* Activity Controls Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
-              <ActivityControls />
-            </div>
+            {/* Screenshot Test */}
+            <ScreenshotTest />
           </div>
         </div>
         <button
@@ -213,7 +200,7 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Permission Debugger - only show in development */}
-      {process.env.NODE_ENV === "development" && <PermissionDebugger />}
+      <PermissionDebugger />
     </div>
   );
 };

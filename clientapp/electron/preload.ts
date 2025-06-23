@@ -14,33 +14,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Screenshot and activity tracking
   captureScreenshot: async () => {
     try {
-      // First check if we have screen recording permission
-      const hasScreenPermission = await ipcRenderer.invoke(
-        "check-screen-recording-permission"
+      // Use IPC to capture screenshot from main process
+      const screenshotData = await ipcRenderer.invoke(
+        "capture-screenshot-main"
       );
-
-      if (!hasScreenPermission) {
-        console.error("Screen recording permission not granted");
-        throw new Error(
-          "Screen recording permission not granted. Please grant permission in System Preferences > Security & Privacy > Privacy > Screen Recording"
-        );
-      }
-
-      const sources = await desktopCapturer.getSources({
-        types: ["screen"],
-        thumbnailSize: { width: 1920, height: 1080 },
-      });
-
-      if (sources.length > 0) {
-        const source = sources[0];
-        return {
-          timestamp: Date.now(),
-          imageData: source.thumbnail.toDataURL(),
-          windowTitle: source.name,
-          applicationName: source.name,
-        };
-      }
-      return null;
+      return screenshotData;
     } catch (error) {
       console.error("Screenshot capture failed:", error);
       throw error; // Re-throw to let the renderer handle it
@@ -72,20 +50,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Permission requests
   getScreenSources: async () => {
     try {
-      // First check if we have screen recording permission
-      const hasScreenPermission = await ipcRenderer.invoke(
-        "check-screen-recording-permission"
-      );
-
-      if (!hasScreenPermission) {
-        console.error("Screen recording permission not granted");
-        return [];
-      }
-
-      const sources = await desktopCapturer.getSources({
-        types: ["screen"],
-        thumbnailSize: { width: 100, height: 100 },
-      });
+      // Use IPC to get screen sources from main process
+      const sources = await ipcRenderer.invoke("get-screen-sources-main");
       return sources;
     } catch (error) {
       console.error("Failed to get screen sources:", error);
@@ -124,4 +90,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // System information
   getSystemInfo: () => ipcRenderer.invoke("get-system-info"),
   getActiveWindowInfo: () => ipcRenderer.invoke("get-active-window-info"),
+
+  // Screenshot and file operations
+  saveScreenshotToDownloads: (imageData: string, fileName: string) =>
+    ipcRenderer.invoke("save-screenshot-to-downloads", imageData, fileName),
+
+  getDownloadFolderPath: () => ipcRenderer.invoke("get-download-folder-path"),
+
+  listScreenshotsInDownloads: () =>
+    ipcRenderer.invoke("list-screenshots-in-downloads"),
+
+  openDownloadFolder: () => ipcRenderer.invoke("open-download-folder"),
 });

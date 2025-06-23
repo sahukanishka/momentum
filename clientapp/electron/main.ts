@@ -484,6 +484,208 @@ ipcMain.handle("get-active-window-info", () => {
   };
 });
 
+// Screenshot and file operations
+ipcMain.handle(
+  "save-screenshot-to-downloads",
+  async (event, imageData: string, fileName: string) => {
+    try {
+      const { app } = require("electron");
+      const path = require("path");
+      const fs = require("fs").promises;
+
+      // Get download folder path
+      const downloadPath = path.join(
+        app.getPath("downloads"),
+        "momentum-screenshots"
+      );
+
+      // Create directory if it doesn't exist
+      try {
+        await fs.mkdir(downloadPath, { recursive: true });
+      } catch (mkdirError) {
+        // Directory might already exist, continue
+      }
+
+      // Create full file path
+      const filePath = path.join(downloadPath, fileName);
+
+      // Convert base64 to buffer and save
+      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+
+      await fs.writeFile(filePath, buffer);
+
+      log(`Screenshot saved to: ${filePath}`, "info");
+
+      return {
+        success: true,
+        filePath: filePath,
+        fileName: fileName,
+      };
+    } catch (error) {
+      log(`Error saving screenshot: ${error}`, "error");
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+);
+
+ipcMain.handle("get-download-folder-path", () => {
+  try {
+    const { app } = require("electron");
+    const path = require("path");
+    const downloadPath = path.join(
+      app.getPath("downloads"),
+      "momentum-screenshots"
+    );
+    return downloadPath;
+  } catch (error) {
+    log(`Error getting download folder path: ${error}`, "error");
+    return null;
+  }
+});
+
+ipcMain.handle("list-screenshots-in-downloads", async () => {
+  try {
+    const { app } = require("electron");
+    const path = require("path");
+    const fs = require("fs").promises;
+
+    const downloadPath = path.join(
+      app.getPath("downloads"),
+      "momentum-screenshots"
+    );
+
+    // Check if directory exists
+    try {
+      await fs.access(downloadPath);
+    } catch {
+      return []; // Directory doesn't exist, return empty array
+    }
+
+    // Read directory contents
+    const files = await fs.readdir(downloadPath);
+
+    // Filter for screenshot files and get file stats
+    const screenshotFiles = [];
+    for (const file of files) {
+      if (
+        file.toLowerCase().endsWith(".png") ||
+        file.toLowerCase().endsWith(".jpg") ||
+        file.toLowerCase().endsWith(".jpeg")
+      ) {
+        const filePath = path.join(downloadPath, file);
+        const stats = await fs.stat(filePath);
+        screenshotFiles.push({
+          name: file,
+          path: filePath,
+          size: stats.size,
+          created: stats.birthtime,
+          modified: stats.mtime,
+        });
+      }
+    }
+
+    // Sort by creation date (newest first)
+    screenshotFiles.sort((a, b) => b.created.getTime() - a.created.getTime());
+
+    return screenshotFiles.map((file) => file.name);
+  } catch (error) {
+    log(`Error listing screenshots: ${error}`, "error");
+    return [];
+  }
+});
+
+ipcMain.handle("open-download-folder", async () => {
+  try {
+    const { app, shell } = require("electron");
+    const path = require("path");
+
+    const downloadPath = path.join(
+      app.getPath("downloads"),
+      "momentum-screenshots"
+    );
+
+    // Open the folder in the default file manager
+    await shell.openPath(downloadPath);
+
+    log(`Opened download folder: ${downloadPath}`, "info");
+    return { success: true };
+  } catch (error) {
+    log(`Error opening download folder: ${error}`, "error");
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+});
+
+ipcMain.handle("capture-screenshot-main", async () => {
+  try {
+    // First check if we have screen recording permission
+    const hasScreenPermission = checkScreenRecordingPermission();
+
+    if (!hasScreenPermission) {
+      log("Screen recording permission not granted", "error");
+      throw new Error(
+        "Screen recording permission not granted. Please grant permission in System Preferences > Security & Privacy > Privacy > Screen Recording"
+      );
+    }
+
+    // Use desktopCapturer in main process
+    const { desktopCapturer } = require("electron");
+    const sources = await desktopCapturer.getSources({
+      types: ["screen"],
+      thumbnailSize: { width: 1920, height: 1080 },
+    });
+
+    if (sources.length > 0) {
+      const source = sources[0];
+      const screenshotData = {
+        timestamp: Date.now(),
+        imageData: source.thumbnail.toDataURL(),
+        windowTitle: source.name,
+        applicationName: source.name,
+      };
+
+      log("Screenshot captured successfully", "info");
+      return screenshotData;
+    }
+
+    throw new Error("No screen sources available");
+  } catch (error) {
+    log(`Screenshot capture failed: ${error}`, "error");
+    throw error;
+  }
+});
+
+ipcMain.handle("get-screen-sources-main", async () => {
+  try {
+    // First check if we have screen recording permission
+    const hasScreenPermission = checkScreenRecordingPermission();
+
+    if (!hasScreenPermission) {
+      log("Screen recording permission not granted", "error");
+      return [];
+    }
+
+    // Use desktopCapturer in main process
+    const { desktopCapturer } = require("electron");
+    const sources = await desktopCapturer.getSources({
+      types: ["screen"],
+      thumbnailSize: { width: 100, height: 100 },
+    });
+
+    log(`Found ${sources.length} screen sources`, "info");
+    return sources;
+  } catch (error) {
+    log(`Failed to get screen sources: ${error}`, "error");
+    return [];
+  }
+});
+
 app.whenReady().then(() => {
   console.log("App ready, creating window and tray...");
   createWindow();
