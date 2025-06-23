@@ -8,7 +8,9 @@ from app.core.security import Security
 from app.db.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.middleware.auth_middleware import auth_middleware
+from app.schemas.organization import OrganizationResponse
 from app.schemas.user import UserResponse, UserUpdate
+from app.services.organization_service import OrganizationService
 from app.services.user_service import UserService
 from app.utils.utils import generate_otp, validate_password
 from app.models.user import User, UserRole
@@ -185,10 +187,18 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
         access_token = Security.create_access_token(user)
         refresh_token = Security.create_refresh_token(user)
         user_response = UserResponse(**user.__dict__)
+        organizations, total = await OrganizationService.get_user_organizations(
+            db=db, user_id=user.id, skip=0, limit=10
+        )
+        organizations_response = [
+            OrganizationResponse.model_validate(org) for org in organizations
+        ]
+
         return {
             "user": user_response,
             "access_token": access_token,
             "refresh_token": refresh_token,
+            "organizations": organizations_response,
         }
     except HTTPException as e:
         raise e
