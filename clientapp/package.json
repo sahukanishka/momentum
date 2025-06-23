@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
-    "dev:electron": "tsc -p electron && electron .",
-    "debug": "tsc -p electron && electron . --inspect --verbose",
+    "dev:electron": "NODE_ENV=development tsc -p electron && electron .",
+    "debug": "NODE_ENV=development tsc -p electron && electron . --inspect --verbose",
     "build": "npm run build:vite && npm run build:electron",
     "build:vite": "vite build",
     "build:electron": "tsc -p electron",
@@ -94,10 +94,10 @@
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
     "typescript": "^5.3.3",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "electron": "^27.3.11"
   },
   "dependencies": {
-    "electron": "^27.3.11",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "screenshot-desktop": "^1.12.7"

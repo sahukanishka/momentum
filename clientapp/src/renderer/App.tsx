@@ -168,7 +168,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Project and Description */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 space-y-6">
+            {/* <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 space-y-6">
               <ProjectSelector
                 selectedProject={selectedProject}
                 onProjectChange={setSelectedProject}
@@ -186,7 +186,7 @@ const AppContent: React.FC = () => {
                   rows={3}
                 />
               </div>
-            </div>
+            </div> */}
 
             {/* Time Log */}
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
@@ -206,7 +206,7 @@ const AppContent: React.FC = () => {
         </div>
         <button
           onClick={handleLogout}
-          className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+          className="bg-gradient-to-r w-full mt-4 from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
         >
           Logout
         </button>

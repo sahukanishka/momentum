@@ -249,7 +249,7 @@ const ActivityControls: React.FC = () => {
         )}
       </div>
 
-      <div className="bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-xl p-6">
+      {/* <div className="bg-gradient-to-r from-gray-50 to-slate-50 border border-gray-200 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <span className="w-2 h-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full mr-3"></span>
           Activity Tracking
@@ -336,7 +336,7 @@ const ActivityControls: React.FC = () => {
             </button>
           )}
         </div>
-      </div>
+      </div> */}
 
       <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-yellow-800 mb-3 flex items-center">

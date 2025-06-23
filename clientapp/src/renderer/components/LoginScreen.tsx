@@ -7,8 +7,8 @@ interface LoginScreenProps {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("kanix@gmail.com");
+  const [password, setPassword] = useState("kanix@123");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +25,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       });
 
       const data = await res.json();
+
+      console.log("data", data);
 
       if (data.success && data.data && data.data.access_token) {
         // Extract user data and tokens
@@ -46,10 +48,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
         // Extract organization data if available
         const orgData =
-          data.data.organization_id || data.data.employee_id
+          data.data.user?.organization_id || data.data.user?.id
             ? {
-                organizationId: data.data.organization_id,
-                employeeId: data.data.employee_id,
+                organizationId: data.data.user.organization_id,
+                employeeId: data.data.user.id,
               }
             : undefined;
 
