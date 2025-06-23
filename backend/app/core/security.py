@@ -32,10 +32,17 @@ class Security:
             minutes=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES"))
         ),
     ):
+        # Handle both users and employees
+        role = getattr(
+            data, "role", "employee"
+        )  # Default to 'employee' if no role attribute
+        account_type = "user" if hasattr(data, "role") else "employee"
+
         token_data = {
             "email": data.email,
             "id": data.id,
-            "role": data.role,
+            "role": role,
+            "account_type": account_type,
         }
         expire = datetime.now(timezone.utc) + expires_delta
         token_data.update({"exp": expire})
@@ -48,10 +55,17 @@ class Security:
 
     @staticmethod
     def create_refresh_token(data: dict, expires_delta: timedelta = timedelta(days=30)):
+        # Handle both users and employees
+        role = getattr(
+            data, "role", "employee"
+        )  # Default to 'employee' if no role attribute
+        account_type = "user" if hasattr(data, "role") else "employee"
+
         token_data = {
             "sub": data.email,
             "user_id": data.id,
-            "role": data.role,
+            "role": role,
+            "account_type": account_type,
         }
         expire = datetime.now(timezone.utc) + expires_delta
         token_data.update({"exp": expire})

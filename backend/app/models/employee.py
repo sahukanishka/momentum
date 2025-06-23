@@ -22,6 +22,8 @@ class Employee(Base):
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    otp: Mapped[str] = mapped_column(String, nullable=True, default=None)
+    otp_expiry: Mapped[datetime] = mapped_column(DateTime, nullable=True, default=None)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), nullable=False

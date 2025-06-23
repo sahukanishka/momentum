@@ -8,6 +8,8 @@ from app.core.security import Security
 from app.db.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.middleware.auth_middleware import auth_middleware
+from app.models.employee import Employee
+from app.schemas.employee import EmployeeResponse
 from app.schemas.organization import OrganizationResponse
 from app.schemas.user import UserResponse, UserUpdate
 from app.services.organization_service import OrganizationService
@@ -110,23 +112,45 @@ class SendOtpRequest(BaseModel):
 @router.post("/send-otp")
 async def send_otp(request: SendOtpRequest, db: AsyncSession = Depends(get_db)):
     try:
+        # First check if it's a user
         user = await UserService.get_by_email(db, request.email.lower())
-        if not user:
-            raise HTTPException(status_code=400, detail="User not found")
-        otp = generate_otp(6)
-        user_dict = {
-            "otp": otp,
-            "otp_expiry": datetime.now() + timedelta(minutes=10),
-        }
-        await mail_service.send_otp_email(
-            to_email=request.email, otp=otp, name=user.name
+        if user:
+            otp = generate_otp(6)
+            user_dict = {
+                "otp": otp,
+                "otp_expiry": datetime.now() + timedelta(minutes=10),
+            }
+            await mail_service.send_otp_email(
+                to_email=request.email, otp=otp, name=user.name
+            )
+            await UserService.update(
+                db, user_id=user.id, user_update=UserUpdate(**user_dict)
+            )
+            return {
+                "message": "OTP sent successfully on email",
+            }
+
+        # If not a user, check if it's an employee
+        employee = await db.execute(
+            select(Employee).where(Employee.email == request.email.lower())
         )
-        await UserService.update(
-            db, user_id=user.id, user_update=UserUpdate(**user_dict)
-        )
-        return {
-            "message": "OTP sent successfully on email",
-        }
+        employee = employee.scalar_one_or_none()
+
+        if employee:
+            otp = generate_otp(6)
+            employee.otp = otp
+            employee.otp_expiry = datetime.now() + timedelta(minutes=10)
+            await mail_service.send_otp_email(
+                to_email=request.email, otp=otp, name=employee.name
+            )
+            await db.commit()
+            return {
+                "message": "OTP sent successfully on email",
+            }
+
+        # If neither user nor employee found
+        raise HTTPException(status_code=400, detail="User not found")
+
     except HTTPException as e:
         raise e
 
@@ -142,21 +166,45 @@ async def reset_password(
     request: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
 ):
     try:
+        # First check if it's a user
         user = await UserService.get_by_email(db, request.email.lower())
-        if not user:
-            raise HTTPException(status_code=400, detail="User not found")
-        if user.otp != request.otp:
-            raise HTTPException(status_code=400, detail="Invalid OTP")
-        if user.otp_expiry < datetime.now():
-            raise HTTPException(status_code=400, detail="OTP expired")
-        user.hashed_password = Security.get_password_hash(request.password)
-        user.otp = None
-        user.otp_expiry = None
-        await db.commit()
-        await db.refresh(user)
-        return {
-            "message": "Password updated successfully",
-        }
+        if user:
+            if user.otp != request.otp:
+                raise HTTPException(status_code=400, detail="Invalid OTP")
+            if user.otp_expiry < datetime.now():
+                raise HTTPException(status_code=400, detail="OTP expired")
+            user.hashed_password = Security.get_password_hash(request.password)
+            user.otp = None
+            user.otp_expiry = None
+            await db.commit()
+            await db.refresh(user)
+            return {
+                "message": "Password updated successfully",
+            }
+
+        # If not a user, check if it's an employee
+        employee = await db.execute(
+            select(Employee).where(Employee.email == request.email.lower())
+        )
+        employee = employee.scalar_one_or_none()
+
+        if employee:
+            if employee.otp != request.otp:
+                raise HTTPException(status_code=400, detail="Invalid OTP")
+            if employee.otp_expiry < datetime.now():
+                raise HTTPException(status_code=400, detail="OTP expired")
+            employee.hashed_password = Security.get_password_hash(request.password)
+            employee.otp = None
+            employee.otp_expiry = None
+            await db.commit()
+            await db.refresh(employee)
+            return {
+                "message": "Password updated successfully",
+            }
+
+        # If neither user nor employee found
+        raise HTTPException(status_code=400, detail="User not found")
+
     except HTTPException as e:
         raise e
 
@@ -169,37 +217,77 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     try:
+        # First check if it's a user
         user_query = await db.execute(
             select(User).where(User.email == request.email.lower())
         )
         user = user_query.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=400, detail="User not found")
-        if not user.is_active:
-            raise HTTPException(status_code=400, detail="User account is not active")
-        if not user.email_verified:
-            raise HTTPException(status_code=400, detail="Email not verified")
-        password_match = Security.verify_password(
-            request.password, user.hashed_password
-        )
-        if not password_match:
-            raise HTTPException(status_code=400, detail="Invalid password")
-        access_token = Security.create_access_token(user)
-        refresh_token = Security.create_refresh_token(user)
-        user_response = UserResponse(**user.__dict__)
-        organizations, total = await OrganizationService.get_user_organizations(
-            db=db, user_id=user.id, skip=0, limit=10
-        )
-        organizations_response = [
-            OrganizationResponse.model_validate(org) for org in organizations
-        ]
 
-        return {
-            "user": user_response,
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "organizations": organizations_response,
-        }
+        if user:
+            # Handle user login
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=400, detail="User account is not active"
+                )
+            if not user.email_verified:
+                raise HTTPException(status_code=400, detail="Email not verified")
+            password_match = Security.verify_password(
+                request.password, user.hashed_password
+            )
+            if not password_match:
+                raise HTTPException(status_code=400, detail="Invalid password")
+
+            access_token = Security.create_access_token(user)
+            refresh_token = Security.create_refresh_token(user)
+            user_response = UserResponse(**user.__dict__)
+            # organizations, total = await OrganizationService.get_user_organizations(
+            #     db=db, user_id=user.id, skip=0, limit=10
+            # )
+            # organizations_response = [
+            #     OrganizationResponse.model_validate(org) for org in organizations
+            # ]
+
+            return {
+                "user": user_response,
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                # "organizations": organizations_response,
+                "account_type": "user",
+            }
+
+        # If not a user, check if it's an employee
+        employee_query = await db.execute(
+            select(Employee).where(Employee.email == request.email.lower())
+        )
+        employee = employee_query.scalar_one_or_none()
+
+        if employee:
+            # Handle employee login
+            if not employee.is_active:
+                raise HTTPException(
+                    status_code=400, detail="Employee account is not active"
+                )
+            # if not employee.email_verified:
+            #     raise HTTPException(status_code=400, detail="Email not verified")
+            password_match = Security.verify_password(
+                request.password, employee.hashed_password
+            )
+            if not password_match:
+                raise HTTPException(status_code=400, detail="Invalid password")
+
+            access_token = Security.create_access_token(employee)
+            refresh_token = Security.create_refresh_token(employee)
+
+            return {
+                "user": EmployeeResponse(**employee.__dict__),
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "account_type": "employee",
+            }
+
+        # If neither user nor employee found
+        raise HTTPException(status_code=400, detail="User not found")
+
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -214,30 +302,67 @@ class VerifyEmailRequest(BaseModel):
 @router.post("/verify-email")
 async def verify_email(request: VerifyEmailRequest, db: AsyncSession = Depends(get_db)):
     try:
+        # First check if it's a user
         user = await db.execute(select(User).where(User.email == request.email.lower()))
         user = user.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=400, detail="User not found")
-        if user.email_verified:
-            raise HTTPException(status_code=400, detail="Email already verified")
-        if user.otp_expiry < datetime.now():
-            raise HTTPException(status_code=400, detail="OTP expired")
-        if user.otp != request.otp:
-            raise HTTPException(status_code=400, detail="Invalid OTP")
-        user.email_verified = True
-        user.is_active = True
-        user.otp = None
-        user.otp_expiry = None
-        await db.commit()
-        await db.refresh(user)
-        access_token = Security.create_access_token(user)
-        refresh_token = Security.create_refresh_token(user)
-        user_response = UserResponse(**user.__dict__)
-        return {
-            "user": user_response,
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-        }
+
+        if user:
+            # Handle user email verification
+            if user.email_verified:
+                raise HTTPException(status_code=400, detail="Email already verified")
+            if user.otp_expiry < datetime.now():
+                raise HTTPException(status_code=400, detail="OTP expired")
+            if user.otp != request.otp:
+                raise HTTPException(status_code=400, detail="Invalid OTP")
+            user.email_verified = True
+            user.is_active = True
+            user.otp = None
+            user.otp_expiry = None
+            await db.commit()
+            await db.refresh(user)
+            access_token = Security.create_access_token(user)
+            refresh_token = Security.create_refresh_token(user)
+            user_response = UserResponse(**user.__dict__)
+            return {
+                "user": user_response,
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "account_type": "user",
+            }
+
+        # If not a user, check if it's an employee
+        employee = await db.execute(
+            select(Employee).where(Employee.email == request.email.lower())
+        )
+        employee = employee.scalar_one_or_none()
+
+        if employee:
+            # Handle employee email verification
+            # if employee.email_verified:
+            #     raise HTTPException(status_code=400, detail="Email already verified")
+            if employee.otp_expiry < datetime.now():
+                raise HTTPException(status_code=400, detail="OTP expired")
+            if employee.otp != request.otp:
+                raise HTTPException(status_code=400, detail="Invalid OTP")
+            employee.email_verified = True
+            employee.is_active = True
+            employee.otp = None
+            employee.otp_expiry = None
+            await db.commit()
+            await db.refresh(employee)
+            access_token = Security.create_access_token(employee)
+            refresh_token = Security.create_refresh_token(employee)
+
+            return {
+                "user": EmployeeResponse(**employee.__dict__),
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "account_type": "employee",
+            }
+
+        # If neither user nor employee found
+        raise HTTPException(status_code=400, detail="User not found")
+
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -264,11 +389,15 @@ class LogoutRequest(BaseModel):
 
 @router.get("/me")
 async def me(user=Depends(auth_middleware), db: AsyncSession = Depends(get_db)):
-    user_query = await db.execute(select(User).where(User.id == user.id))
-    user = user_query.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=400, detail="User not found")
-    user_response = UserResponse(**user.__dict__)
-    return {
-        "user": user_response,
-    }
+    # The auth_middleware now returns either UserResponse or EmployeeResponse
+    # We can check the type to determine the response format
+    if hasattr(user, "organization_id"):
+        # This is an employee
+        return {
+            "employee": user,
+        }
+    else:
+        # This is a user
+        return {
+            "user": user,
+        }
