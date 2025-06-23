@@ -1,0 +1,67 @@
+{
+  "name": "momentum-time-tracker",
+  "version": "1.0.0",
+  "description": "A cross-platform time tracking desktop app",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "tsc -p electron && electron .",
+    "build": "npm run build:vite && npm run build:electron",
+    "build:vite": "vite build",
+    "build:electron": "tsc -p electron",
+    "preview": "vite preview",
+    "electron": "electron .",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "react",
+    "typescript",
+    "tailwind",
+    "time-tracker"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "build": {
+    "appId": "com.momentum.timetracker",
+    "productName": "Momentum Time Tracker",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "dist/main.js",
+      "dist/preload.js",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "public/vite.svg"
+    },
+    "extraResources": []
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "electron": "^27.1.3",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
