@@ -31,6 +31,13 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
       >
         {isTracking ? "⏱️ Tracking time..." : "⏸️ Timer stopped"}
       </div>
+
+      {/* Screenshot capture status */}
+      {isTracking && (
+        <div className="mt-3 text-xs text-green-600 bg-green-50 px-3 py-1 rounded-lg inline-block border border-green-200">
+          📸 Screenshots captured every 30s
+        </div>
+      )}
     </div>
   );
 };

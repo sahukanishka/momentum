@@ -8,6 +8,9 @@ import TimeLog from "./components/TimeLog";
 import UploadStatus from "./components/UploadStatus";
 import PermissionDebugger from "./components/PermissionDebugger";
 import ScreenshotTest from "./components/ScreenshotTest";
+import { clockIn, clockOut } from "./services/Api";
+import { mainService } from "./services/MainService";
+import { s3UploadService } from "./services/S3UploadService";
 
 interface TimeEntry {
   id: string;
@@ -19,7 +22,16 @@ interface TimeEntry {
 }
 
 const AppContent: React.FC = () => {
-  const { user, isAuthenticated, isLoading, logout, employeeId } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    isLoading,
+    logout,
+    employeeId,
+    organizationId,
+    projectId,
+    taskId,
+  } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<
     "welcome" | "login" | "home"
   >("welcome");
@@ -29,6 +41,8 @@ const AppContent: React.FC = () => {
   const [description, setDescription] = useState("");
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [screenshotInterval, setScreenshotInterval] =
+    useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Set screen based on authentication state
@@ -55,6 +69,15 @@ const AppContent: React.FC = () => {
     };
   }, [isTracking]);
 
+  // Cleanup screenshot interval on unmount
+  useEffect(() => {
+    return () => {
+      if (screenshotInterval) {
+        clearInterval(screenshotInterval);
+      }
+    };
+  }, [screenshotInterval]);
+
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -65,35 +88,126 @@ const AppContent: React.FC = () => {
   };
 
   const handleStartTimer = async () => {
-    setIsTracking(true);
-    setStartTime(new Date());
+    try {
+      setIsTracking(true);
+      setStartTime(new Date());
 
-    console.log("employeeId", employeeId);
+      console.log("Starting timer with employeeId:", employeeId);
+
+      // Call clock-in API
+      if (employeeId) {
+        await clockIn(employeeId, {
+          notes: description || "Starting shift",
+        });
+        console.log("Clock-in successful");
+      }
+
+      // Start automatic screenshot capture every 30 seconds
+      const interval = setInterval(async () => {
+        try {
+          console.log("=== Starting screenshot capture cycle ===");
+
+          // Capture and save screenshot
+          console.log("1. Capturing screenshot...");
+          const screenshotData = await mainService.captureAndSaveScreenshot();
+          console.log("2. Screenshot captured:", screenshotData.fileName);
+
+          // Upload to S3 and backend
+          if (employeeId && organizationId) {
+            console.log("3. Starting upload process...");
+            const trackingId = `track_${Date.now()}_${Math.random()
+              .toString(36)
+              .substr(2, 9)}`;
+
+            console.log("4. Uploading to S3 and backend...");
+            const uploadResult = await s3UploadService.uploadScreenshot(
+              screenshotData.imageData,
+              {
+                employee_id: employeeId,
+                organization_id: organizationId,
+                tracking_id: trackingId,
+                project_id: projectId || undefined,
+                task_id: taskId || undefined,
+              }
+            );
+
+            if (uploadResult.success) {
+              console.log(
+                "✅ Screenshot uploaded successfully:",
+                uploadResult.url
+              );
+            } else {
+              console.error("❌ Screenshot upload failed:", uploadResult.error);
+            }
+          } else {
+            console.error("❌ Missing employeeId or organizationId for upload");
+          }
+
+          console.log("=== Screenshot capture cycle completed ===");
+        } catch (error) {
+          console.error("❌ Error in screenshot capture cycle:", error);
+        }
+      }, 30000); // 30 seconds
+
+      setScreenshotInterval(interval);
+      console.log("Automatic screenshot capture started");
+    } catch (error) {
+      console.error("Error starting timer:", error);
+      setIsTracking(false);
+      setStartTime(null);
+    }
   };
 
   const handleStopTimer = async () => {
-    if (startTime) {
-      const endTime = new Date();
-      const duration = Math.floor(
-        (endTime.getTime() - startTime.getTime()) / 1000
-      );
+    try {
+      // Stop the screenshot interval
+      if (screenshotInterval) {
+        clearInterval(screenshotInterval);
+        setScreenshotInterval(null);
+        console.log("Automatic screenshot capture stopped");
+      }
 
-      const newEntry: TimeEntry = {
-        id: Date.now().toString(),
-        project: selectedProject,
-        startTime,
-        endTime,
-        duration,
-        description: description || "No description",
-      };
+      // Call clock-out API
+      if (employeeId) {
+        await clockOut(employeeId, {
+          notes: description || "Ending shift",
+        });
+        console.log("Clock-out successful");
+      }
 
-      setTimeEntries((prev) => [newEntry, ...prev.slice(0, 9)]); // Keep only last 10 entries
-      setDescription("");
+      if (startTime) {
+        const endTime = new Date();
+        const duration = Math.floor(
+          (endTime.getTime() - startTime.getTime()) / 1000
+        );
+
+        const newEntry: TimeEntry = {
+          id: Date.now().toString(),
+          project: selectedProject,
+          startTime,
+          endTime,
+          duration,
+          description: description || "No description",
+        };
+
+        setTimeEntries((prev) => [newEntry, ...prev.slice(0, 9)]); // Keep only last 10 entries
+        setDescription("");
+      }
+
+      setIsTracking(false);
+      setCurrentTime(0);
+      setStartTime(null);
+    } catch (error) {
+      console.error("Error stopping timer:", error);
+      // Continue with timer stop even if API call fails
+      setIsTracking(false);
+      setCurrentTime(0);
+      setStartTime(null);
+      if (screenshotInterval) {
+        clearInterval(screenshotInterval);
+        setScreenshotInterval(null);
+      }
     }
-
-    setIsTracking(false);
-    setCurrentTime(0);
-    setStartTime(null);
   };
 
   const handleLogout = () => {
@@ -185,10 +299,10 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Upload Status */}
-            <UploadStatus />
+            {/* <UploadStatus /> */}
 
             {/* Screenshot Test */}
-            <ScreenshotTest />
+            {/* <ScreenshotTest /> */}
           </div>
         </div>
         <button
@@ -200,7 +314,7 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Permission Debugger - only show in development */}
-      <PermissionDebugger />
+      {/* <PermissionDebugger /> */}
     </div>
   );
 };

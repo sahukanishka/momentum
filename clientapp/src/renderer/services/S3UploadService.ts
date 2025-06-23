@@ -1,3 +1,8 @@
+import {
+  getPresignedUrl,
+  uploadScreenshot as uploadScreenshotApi,
+} from "./Api";
+
 interface S3UploadResponse {
   success: boolean;
   url?: string;
@@ -25,33 +30,17 @@ class S3UploadService {
     fileName: string
   ): Promise<S3UploadResponse> {
     try {
-      // First, get S3 upload URL from backend
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/v1/screenshots/s3/presigned-url",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            fileName,
-            contentType: "image/png",
-          }),
-        }
-      );
+      const presignedData: any = await getPresignedUrl(fileName);
+      const uploadUrl = presignedData?.data?.data?.uploadUrl;
 
-      if (!response.ok) {
-        throw new Error(`Failed to get presigned URL: ${response.statusText}`);
-      }
+      console.log("Presigned URL response:", presignedData);
 
-      const presignedData = await response.json();
-
-      if (!presignedData.success || !presignedData.data?.uploadUrl) {
-        throw new Error("Invalid presigned URL response");
+      if (!uploadUrl) {
+        throw new Error("No upload URL received from presigned URL API");
       }
 
       // Upload to S3 using presigned URL
-      const uploadResponse = await fetch(presignedData.data.uploadUrl, {
+      const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
         headers: {
           "Content-Type": "image/png",
@@ -65,8 +54,8 @@ class S3UploadService {
 
       return {
         success: true,
-        url: presignedData.data.url,
-        path: presignedData.data.path,
+        url: presignedData.data.data.url,
+        path: presignedData.data.data.path,
       };
     } catch (error) {
       console.error("S3 upload error:", error);
@@ -154,7 +143,7 @@ class S3UploadService {
     try {
       // Generate filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, "_");
-      const fileName = `screenshots/screenshot_${timestamp}.png`;
+      const fileName = `screenshot_${timestamp}.png`;
 
       // Upload to S3
       const uploadResult = await this.uploadToS3(imageData, fileName);
@@ -168,7 +157,7 @@ class S3UploadService {
       const activeApp = await this.getActiveApplication();
 
       // Prepare data for backend
-      const uploadData: ScreenshotUploadData = {
+      const uploadData: any = {
         employee_id: authData.employee_id,
         organization_id: authData.organization_id,
         path: uploadResult.path || fileName,
@@ -177,41 +166,16 @@ class S3UploadService {
         geo_location: systemInfo.geo_location,
         ip_address: systemInfo.ip_address,
         app: activeApp,
-        tracking_id: authData.tracking_id,
-        project_id: authData.project_id,
-        task_id: authData.task_id,
+        // tracking_id: authData.tracking_id,
+        // project_id: authData.project_id,
+        // task_id: authData.task_id,
       };
 
-      // Send to backend
-      const backendResponse = await fetch(
-        "http://127.0.0.1:8000/api/v1/screenshots/upload",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${
-              localStorage.getItem("momentum_tokens")
-                ? JSON.parse(localStorage.getItem("momentum_tokens")!)
-                    .access_token
-                : ""
-            }`,
-          },
-          body: JSON.stringify(uploadData),
-        }
-      );
+      // Send to backend using the API function
+      const backendResult = await uploadScreenshotApi(uploadData);
 
-      if (!backendResponse.ok) {
-        const errorData = await backendResponse.json().catch(() => ({}));
-        throw new Error(
-          errorData.message ||
-            `Backend upload failed: ${backendResponse.statusText}`
-        );
-      }
-
-      const backendData = await backendResponse.json();
-
-      if (!backendData.success) {
-        throw new Error(backendData.message || "Backend upload failed");
+      if (!backendResult.success) {
+        throw new Error(backendResult.message || "Backend upload failed");
       }
 
       return {
