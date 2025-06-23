@@ -211,6 +211,7 @@ async def get_organization_screenshots(
         screenshot_responses = []
         for screenshot in screenshots:
             response_data = ScreenshotResponse.model_validate(screenshot)
+            response_data.path = f"https://sixeye-audio-files.s3.us-east-1.amazonaws.com/screenshots/{response_data.path}"
 
             screenshot_responses.append(response_data)
 

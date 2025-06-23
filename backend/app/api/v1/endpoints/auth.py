@@ -240,18 +240,18 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
             access_token = Security.create_access_token(user)
             refresh_token = Security.create_refresh_token(user)
             user_response = UserResponse(**user.__dict__)
-            # organizations, total = await OrganizationService.get_user_organizations(
-            #     db=db, user_id=user.id, skip=0, limit=10
-            # )
-            # organizations_response = [
-            #     OrganizationResponse.model_validate(org) for org in organizations
-            # ]
+            organizations, total = await OrganizationService.get_user_organizations(
+                db=db, user_id=user.id, skip=0, limit=10
+            )
+            organizations_response = [
+                OrganizationResponse.model_validate(org) for org in organizations
+            ]
 
             return {
                 "user": user_response,
                 "access_token": access_token,
                 "refresh_token": refresh_token,
-                # "organizations": organizations_response,
+                "organizations": organizations_response,
                 "account_type": "user",
             }
 
