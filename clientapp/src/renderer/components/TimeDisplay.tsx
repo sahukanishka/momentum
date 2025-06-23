@@ -14,15 +14,19 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({
   return (
     <div className="text-center">
       <div
-        className={`text-4xl font-mono font-bold ${
-          isTracking ? "text-green-600" : "text-gray-400"
+        className={`text-5xl font-mono font-bold mb-3 ${
+          isTracking
+            ? "bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent"
+            : "text-gray-400"
         }`}
       >
         {formatTime(currentTime)}
       </div>
       <div
-        className={`text-sm mt-2 ${
-          isTracking ? "text-green-600" : "text-gray-500"
+        className={`text-sm font-medium px-4 py-2 rounded-xl inline-block ${
+          isTracking
+            ? "bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 border border-purple-200"
+            : "bg-gray-100 text-gray-500"
         }`}
       >
         {isTracking ? "⏱️ Tracking time..." : "⏸️ Timer stopped"}

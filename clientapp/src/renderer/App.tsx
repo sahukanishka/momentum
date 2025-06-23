@@ -3,6 +3,9 @@ import TimeDisplay from "./components/TimeDisplay";
 import TimerControls from "./components/TimerControls";
 import ProjectSelector from "./components/ProjectSelector";
 import TimeLog from "./components/TimeLog";
+import ActivityControls from "./components/ActivityControls";
+import WelcomeScreen from "./components/WelcomeScreen";
+import LoginScreen from "./components/LoginScreen";
 
 interface TimeEntry {
   id: string;
@@ -13,23 +16,36 @@ interface TimeEntry {
   description: string;
 }
 
-function App() {
-  const [isTracking, setIsTracking] = useState(false);
+const App: React.FC = () => {
+  const [currentScreen, setCurrentScreen] = useState<
+    "welcome" | "login" | "home"
+  >("welcome");
+  const [user, setUser] = useState<any>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  const [isTracking, setIsTracking] = useState(false);
   const [selectedProject, setSelectedProject] = useState("General");
   const [description, setDescription] = useState("");
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [startTime, setStartTime] = useState<Date | null>(null);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    // Check if user is already logged in
+    const savedUser = localStorage.getItem("momentum_user");
+    const accessToken = localStorage.getItem("momentum_access_token");
 
+    if (savedUser && accessToken) {
+      setUser(JSON.parse(savedUser));
+      setCurrentScreen("home");
+    }
+  }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
     if (isTracking) {
       interval = setInterval(() => {
         setCurrentTime((prev) => prev + 1);
       }, 1000);
     }
-
     return () => {
       if (interval) {
         clearInterval(interval);
@@ -37,13 +53,21 @@ function App() {
     };
   }, [isTracking]);
 
-  const handleStartTracking = () => {
-    setIsTracking(true);
-    setStartTime(new Date());
-    setCurrentTime(0);
+  const formatTime = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleStopTracking = () => {
+  const handleStartTimer = () => {
+    setIsTracking(true);
+    setStartTime(new Date());
+  };
+
+  const handleStopTimer = () => {
     if (startTime) {
       const endTime = new Date();
       const duration = Math.floor(
@@ -59,79 +83,119 @@ function App() {
         description: description || "No description",
       };
 
-      setTimeEntries((prev) => [newEntry, ...prev]);
+      setTimeEntries((prev) => [newEntry, ...prev.slice(0, 9)]); // Keep only last 10 entries
+      setDescription("");
     }
 
     setIsTracking(false);
-    setStartTime(null);
     setCurrentTime(0);
-    setDescription("");
+    setStartTime(null);
   };
 
-  const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const handleLoginSuccess = (
+    userData: any,
+    tokens: { access_token: string; refresh_token: string }
+  ) => {
+    setUser(userData);
+    setCurrentScreen("home");
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem("momentum_user");
+    localStorage.removeItem("momentum_access_token");
+    localStorage.removeItem("momentum_refresh_token");
+    setUser(null);
+    setCurrentScreen("welcome");
+  };
+
+  if (currentScreen === "welcome") {
+    return <WelcomeScreen onContinue={() => setCurrentScreen("login")} />;
+  }
+
+  if (currentScreen === "login") {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-6">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4">
-          <h1 className="text-white text-xl font-semibold text-center">
-            Momentum Time Tracker
-          </h1>
-          <p className="text-blue-100 text-sm text-center mt-1">
-            Track your time like a pro
-          </p>
+        <div className=" rounded-2xl p-6 mb-6 border border-white/20">
+          <div className="flex justify-center items-center">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                Momentum
+              </h1>
+              <p className="text-gray-600 text-sm">
+                Hey 👋 {user?.name || user?.email || "User"}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Main Content */}
-        <div className="p-6 space-y-6">
-          {/* Time Display */}
-          <TimeDisplay
-            currentTime={currentTime}
-            formatTime={formatTime}
-            isTracking={isTracking}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Timer Section */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Timer Display */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
+              <TimeDisplay
+                currentTime={currentTime}
+                formatTime={formatTime}
+                isTracking={isTracking}
+              />
+              {/* Timer Controls */}
+              <div className=" items-center pt-4">
+                <TimerControls
+                  isTracking={isTracking}
+                  onStart={handleStartTimer}
+                  onStop={handleStopTimer}
+                />
+              </div>
+            </div>
 
-          {/* Project Selector */}
-          <ProjectSelector
-            selectedProject={selectedProject}
-            onProjectChange={setSelectedProject}
-          />
+            {/* Project and Description */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 space-y-6">
+              <ProjectSelector
+                selectedProject={selectedProject}
+                onProjectChange={setSelectedProject}
+              />
 
-          {/* Description Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              What are you working on?
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter task description..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              rows={3}
-            />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Description
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What are you working on?"
+                  className="w-full text-black px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm resize-none"
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Time Log */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
+              <TimeLog timeEntries={timeEntries} formatTime={formatTime} />
+            </div>
           </div>
 
-          {/* Timer Controls */}
-          <TimerControls
-            isTracking={isTracking}
-            onStart={handleStartTracking}
-            onStop={handleStopTracking}
-          />
-
-          {/* Time Log */}
-          <TimeLog timeEntries={timeEntries} formatTime={formatTime} />
+          {/* Activity Controls Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
+              <ActivityControls />
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium py-2 px-4 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default App;
