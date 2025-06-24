@@ -1,108 +1,84 @@
 # Momentum Time Tracker
 
-A cross-platform desktop time tracking application built with Electron, React, TypeScript, and Tailwind CSS. This app provides a simple and elegant interface for tracking time spent on different projects and tasks.
+A desktop application for time tracking and activity monitoring built with Electron, React, and TypeScript.
 
-## Features
-
-- ⏱️ **Real-time Timer**: Start and stop time tracking with a clean interface
-- 📊 **Project Management**: Organize time entries by different projects
-- 📝 **Task Descriptions**: Add detailed descriptions to your time entries
-- 📈 **Time History**: View your recent time tracking history
-- 🖥️ **System Tray**: Runs in the background with system tray integration
-- 🎨 **Modern UI**: Beautiful interface built with Tailwind CSS
-
-## Tech Stack
-
-- **Electron**: Cross-platform desktop app framework
-- **React**: UI library for building user interfaces
-- **TypeScript**: Type-safe JavaScript
-- **Tailwind CSS**: Utility-first CSS framework
-- **Vite**: Fast build tool and development server
-
-## Project Structure
-
-```
-/clientapp
-├── src/
-│   ├── main.ts (Electron)
-│   ├── preload.ts
-│   └── renderer/
-│       ├── App.tsx
-│       ├── components/
-│       ├── services/
-│       ├── hooks/
-├── public/
-├── package.json
-└── vite.config.js
-```
-
-## Getting Started
+## 🚀 Quick Setup
 
 ### Prerequisites
-
-- Node.js (v16 or higher)
+- Node.js (v16+)
 - npm or yarn
 
-### Installation
-
-1. Clone the repository:
+### Installation & Run
 ```bash
-git clone <repository-url>
-cd clientapp
-```
-
-2. Install dependencies:
-```bash
+# Install dependencies
 npm install
-```
 
-3. Start the development server:
-```bash
+# Development mode
 npm run dev
-```
 
-This will start both the Vite development server and the Electron app.
-
-### Building for Production
-
-To build the app for production:
-
-```bash
+# Build for production
 npm run build
+
+# Build and package
+npm run build:prod
 ```
 
-The built files will be in the `dist` directory.
+## 🏗️ Architecture
 
-## Development
+### Main Process (Electron)
+- **File**: `electron/main.ts`
+- **Responsibilities**: Window management, system permissions, screenshot capture, file operations
+- **Key Features**: Screen recording permission handling, desktop capture, file system access
 
-- **Development Mode**: `npm run dev` - Starts both Vite dev server and Electron
-- **Build**: `npm run build` - Builds the app for production
-- **Preview**: `npm run preview` - Preview the built app
+### Renderer Process (React)
+- **File**: `src/renderer/App.tsx`
+- **Responsibilities**: UI components, timer logic, API communication
+- **Key Features**: Timer controls, task selection, activity tracking
 
-## Usage
+### Services Layer
+- **API Service**: `src/renderer/services/Api.ts` - Backend communication
+- **S3 Upload Service**: `src/renderer/services/S3UploadService.ts` - AWS S3 integration
+- **Main Service**: `src/renderer/services/MainService.ts` - Screenshot capture & file operations
 
-1. **Start the App**: The app will appear in your system tray
-2. **Show/Hide**: Click the tray icon to show or hide the app window
-3. **Select Project**: Choose a project from the dropdown
-4. **Add Description**: Enter what you're working on
-5. **Start Timer**: Click "Start Timer" to begin tracking
-6. **Stop Timer**: Click "Stop Timer" to end the session
-7. **View History**: See your recent time entries at the bottom
+## 📁 File Structure
+```
+clientapp/
+├── electron/                 # Main process
+│   ├── main.ts              # Electron main process
+│   ├── preload.ts           # Preload script
+│   └── tsconfig.json        # TypeScript config
+├── src/renderer/            # Renderer process
+│   ├── components/          # React components
+│   ├── services/            # Business logic services
+│   ├── contexts/            # React contexts
+│   └── App.tsx              # Main app component
+├── package.json             # Dependencies & scripts
+└── vite.config.js           # Build configuration
+```
 
-## System Tray Features
+## 🛠️ Tech Stack
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Desktop**: Electron 27
+- **Build Tool**: Vite
+- **Package Manager**: npm
+- **State Management**: React Context API
+- **UI Components**: Custom components with Tailwind
 
-- **Show App**: Display the main window
-- **Start/Stop Tracking**: Quick access to timer controls
-- **Quit**: Close the application completely
+## 🔧 Key Features
+- **Time Tracking**: Start/stop timer with project/task selection
+- **Screenshot Capture**: Automatic screenshots every 30 seconds
+- **Activity Monitoring**: System information collection
+- **AWS Integration**: S3 upload with presigned URLs
+- **Backend API**: Clock-in/out and screenshot upload endpoints
+- **Permission Management**: macOS screen recording & accessibility
 
-## Contributing
+## 🔐 Permissions Required
+- **Screen Recording**: For screenshot capture
+- **Accessibility**: For activity monitoring (macOS)
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License. 
+## 📡 API Endpoints
+- `POST /api/v1/time-tracking/clock-in/{employeeId}` - Start tracking
+- `POST /api/v1/time-tracking/clock-out/{employeeId}` - Stop tracking
+- `POST /api/v1/screenshots/s3/presigned-url` - Get S3 upload URL
+- `POST /api/v1/screenshots/upload` - Upload activity data
+- `GET /api/v1/tasks/employee/{employeeId}` - Get employee tasks 
