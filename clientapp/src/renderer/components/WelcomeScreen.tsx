@@ -9,7 +9,7 @@ const WelcomeScreen: React.FC<{ onContinue: () => void }> = ({
         <div className="text-center">
           <div className="text-6xl mb-6">👋</div>
           <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-            Welcome to Momentumssaaa
+            Welcome to Momentum
           </h1>
           <p className="text-gray-600 mb-8 leading-relaxed">
             Track your work, capture activity, and stay productive. This app

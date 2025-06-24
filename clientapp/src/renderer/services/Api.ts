@@ -133,3 +133,23 @@ export const getPresignedUrl = async (
     throw error;
   }
 };
+
+export const getTasks = async (employeeId: string): Promise<any> => {
+  const token = localStorage.getItem("momentum_tokens");
+  const access_token = JSON.parse(token || "{}").access_token;
+  try {
+    const response = await fetch(`${API_URL}/tasks/employee/${employeeId}`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting tasks:", error);
+    throw error;
+  }
+};

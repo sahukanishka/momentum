@@ -5,9 +5,7 @@ import LoginScreen from "./components/LoginScreen";
 import TimeDisplay from "./components/TimeDisplay";
 import TimerControls from "./components/TimerControls";
 import TimeLog from "./components/TimeLog";
-import UploadStatus from "./components/UploadStatus";
-import PermissionDebugger from "./components/PermissionDebugger";
-import ScreenshotTest from "./components/ScreenshotTest";
+import TaskList from "./components/TaskList";
 import { clockIn, clockOut } from "./services/Api";
 import { mainService } from "./services/MainService";
 import { s3UploadService } from "./services/S3UploadService";
@@ -43,6 +41,9 @@ const AppContent: React.FC = () => {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [screenshotInterval, setScreenshotInterval] =
     useState<NodeJS.Timeout | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>(
+    undefined
+  );
 
   useEffect(() => {
     // Set screen based on authentication state
@@ -127,7 +128,7 @@ const AppContent: React.FC = () => {
                 organization_id: organizationId,
                 tracking_id: trackingId,
                 project_id: projectId || undefined,
-                task_id: taskId || undefined,
+                task_id: selectedTaskId || undefined,
               }
             );
 
@@ -272,26 +273,13 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            {/* Project and Description */}
-            {/* <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 space-y-6">
-              <ProjectSelector
-                selectedProject={selectedProject}
-                onProjectChange={setSelectedProject}
+            {/* Task Selection */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
+              <TaskList
+                selectedTaskId={selectedTaskId}
+                onTaskSelect={setSelectedTaskId}
               />
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What are you working on?"
-                  className="w-full text-black px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm resize-none"
-                  rows={3}
-                />
-              </div>
-            </div> */}
+            </div>
 
             {/* Time Log */}
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
