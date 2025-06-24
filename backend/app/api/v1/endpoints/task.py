@@ -363,3 +363,37 @@ async def get_task_employees(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/employee/{employee_id}", response_model=TaskListResponse)
+async def get_employee_tasks(
+    employee_id: str,
+    page: int = Query(1, ge=1, description="Page number"),
+    size: int = Query(10, ge=1, le=100, description="Page size"),
+    current_user=Depends(auth_middleware),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get all tasks assigned to a specific employee.
+    Only admin users or organization creators can view employee tasks.
+    """
+    try:
+        skip = (page - 1) * size
+        tasks, total = await TaskService.get_employee_tasks(
+            db=db, employee_id=employee_id, skip=skip, limit=size
+        )
+
+        # Prepare response with project and organization names
+        task_responses = []
+        for task in tasks:
+            response_data = TaskResponse.model_validate(task)
+            task_responses.append(response_data)
+
+        return TaskListResponse(
+            tasks=task_responses,
+            total=total,
+            page=page,
+            size=size,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

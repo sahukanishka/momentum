@@ -126,7 +126,7 @@ class MailService:
         subject = "Your Login Credentials"
         template_data = {
             "name": name,
-            "login_url": login_url,
+            "login_url": "http://localhost:8080/download",
             "password": password,
             "email": to_email,
         }

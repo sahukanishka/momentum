@@ -412,6 +412,48 @@ class TaskService:
         return result.scalars().all()
 
     @staticmethod
+    async def get_employee_tasks(
+        db: AsyncSession, employee_id: str, skip: int = 0, limit: int = 100
+    ) -> tuple[List[Task], int]:
+        """Get all tasks assigned to an employee with pagination"""
+        # Get total count
+        total_result = await db.execute(
+            select(func.count(Task.id))
+            .join(task_employees, Task.id == task_employees.c.task_id)
+            .where(
+                and_(
+                    task_employees.c.employee_id == employee_id,
+                    task_employees.c.is_active == True,
+                    Task.is_active == True,
+                )
+            )
+        )
+        total = total_result.scalar()
+
+        # Get tasks with pagination
+        result = await db.execute(
+            select(Task)
+            .options(
+                selectinload(Task.project).selectinload(Project.organization),
+                selectinload(Task.employees),
+            )
+            .join(task_employees, Task.id == task_employees.c.task_id)
+            .where(
+                and_(
+                    task_employees.c.employee_id == employee_id,
+                    task_employees.c.is_active == True,
+                    Task.is_active == True,
+                )
+            )
+            .order_by(Task.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        tasks = result.scalars().all()
+
+        return list(tasks), total
+
+    @staticmethod
     async def can_user_manage_project(
         db: AsyncSession, user_id: str, project_id: str
     ) -> bool:
